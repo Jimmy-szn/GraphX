@@ -1,6 +1,6 @@
 # GraphX
 
-An interactive math equation plotter built with C++ and OpenGL.
+An iterative math equation plotter built with C++ and OpenGL.
 
 ## Features
 
