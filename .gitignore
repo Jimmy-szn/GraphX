@@ -1,0 +1,16 @@
+
+build/
+
+
+.vscode/
+.idea/
+*.vcxproj*
+*.sln
+
+
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.dll
