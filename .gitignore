@@ -14,3 +14,8 @@ build/
 *.a
 *.lib
 *.dll
+
+snapshot_*.png
+
+.vs/
+out/
