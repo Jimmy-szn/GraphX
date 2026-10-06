@@ -15,6 +15,12 @@ build/
 *.lib
 *.dll
 
+_deps/
+.cache/
+.clangd
+.ninja_*
+build.*
+cmake*
 snapshot_*.png
 
 .vs/
