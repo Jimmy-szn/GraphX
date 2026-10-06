@@ -21,6 +21,7 @@ _deps/
 .ninja_*
 build.*
 cmake*
+snapshot_*.png
 
 .vs/
 out/
