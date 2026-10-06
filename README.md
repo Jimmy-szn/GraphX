@@ -43,7 +43,7 @@ cmake --build build
 Current UI supports equations presents and input, plot settings and fractal settings, but these controls do not yet produce rendered graphs or fractals. The scene renderer and snapshot handlin are unfinished.
 
 ## Evidence Screenshots
-![alt text](docs\screenshots\image.png)
+![GraphX application screenshot](docs/screenshots/image.png)
 
 
 
