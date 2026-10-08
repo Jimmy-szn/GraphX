@@ -54,8 +54,7 @@ cmake --build build
 - Camera navigation like zooming, e.t.c
 - 2D Graph plotting uses preset functions, arbitrary equation input not yet supported
 
-## Evidence Screenshots
-![GraphX application screenshot](docs/screenshots/image.png)
+
 
 
 
