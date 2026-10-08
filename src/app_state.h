@@ -2,6 +2,9 @@
 #include <string>
 
 enum class AppMode     { FunctionPlotter, FractalExplorer };
+enum class PlotView   { Graph2D, Surface3D};
+enum class Graph2DPlot { Line, Parabola, Sine, Cosine, Circle };
+enum class RasterLineAlgorithm { DDA, Bresenham };
 enum class ViewMode    { Wireframe, Surface };
 enum class FractalType { Mandelbrot, Julia };
 
@@ -16,11 +19,18 @@ struct SceneViewport {
 struct AppState {
     //Mode
     AppMode mode = AppMode::FunctionPlotter;
+    PlotView plotView = PlotView::Graph2D;
+    bool fillUnderCurve = false;
+    Graph2DPlot graph2DPlot = Graph2DPlot::Line;
+    RasterLineAlgorithm rasterLineAlgorithm = RasterLineAlgorithm::Bresenham;
 
     //Function plotter controls
     char     equation[256] = "a*sin(x) + b*cos(y)";   // right side of z = f(x,y)
     float    paramA = 1.5f;
     float    paramB = 0.8f;
+    float    lineSlope = 0.75f;
+    float    lineIntercept = 0.5f;
+    int      circleRadius = 3;
     ViewMode viewMode = ViewMode::Wireframe;
     bool     showGrid = true;
     bool     lighting = false;
