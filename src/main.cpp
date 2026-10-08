@@ -1,3 +1,7 @@
+#include "UI/ui_panel.h"
+#include <cstddef>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb/stb_image_write.h"
 #include <cstdio>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -11,7 +15,6 @@
 #include <imgui.h>
 #include <iostream>
 #include <vector>
-
 void renderGraph2D(rasterization::PixelBuffer &canvas, const AppState &state) {
   constexpr int pixelsPerUnit = 40;
   const float xMin = -canvas.width() / (2.0f * pixelsPerUnit);
@@ -221,6 +224,14 @@ int main() {
 
     glViewport(0, 0, fbW, fbH);
     ui::endFrame();
+    if(state.snapshotRequested) {
+        std::vector<unsigned char> pixels(
+            static_cast<std::size_t>(fbW) * fbH * 4);
+        glReadBuffer(GL_BACK);
+        glReadPixels(0, 0, fbW, fbH, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());        
+        const int saved=stbi_write_png("src/snapshots/graphx_screenshot.png", fbW, fbH, 4, pixels.data(), fbW * 4);
+       ui::setStatus(state, saved ? "Screenshot saved: snapshots/graphx_screenshot.png." : "Failed to save screenshot.");
+    }
 
     glfwSwapBuffers(window);
     state.clearRequests();
