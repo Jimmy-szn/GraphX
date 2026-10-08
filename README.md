@@ -3,7 +3,7 @@
 An iterative math visualization C++/OpenGL application that provides an interactive way to visualize mathematical functions and recursive fractal sets in real time. It allows students and lecturers to explore complex concepts visually, making mathematics easier to understand and more engaging.
 
 ## Group Members and responsibilities
-1. Jimmy Kariuki - System Integration, Testing and Documentation
+1. Jimmy Kariuki - Rasterization, Intergration and Testing
 2. Paul Obonyo - User Interface Design
 3. Gerald Aduda- System Architecture and Mode management
 4. Daniel Tashobya - 3D Surface engineering for equations
@@ -12,7 +12,7 @@ An iterative math visualization C++/OpenGL application that provides an interact
 
 ## Features
 
-- 3D explicit function plotting
+- 3D and 2D explicit function plotting
 - 2D fractal rendering with shaders
 
 ## Technologies and Tools Required
@@ -27,9 +27,9 @@ An iterative math visualization C++/OpenGL application that provides an interact
 - Dear ImGui
 ## Graphical Techniques and Algorithims
 Planned use of Line, Circle and Polygon algorrithms:
-1.  DDA/ Bresenham Line algoritm will be used to determine which pixels form a line
+1.  DDA/ Bresenham Line algoritm have been used to determine which pixels form a line in the 2D graph plotting.
 2. Scan Line Polygon fill will be used to fill interiors of drawn polyons.
-3. Midpoint Circle Algorithm will be used to plot circle pixels.
+3. Midpoint Circle Algorithm has been used to plot circle pixels in Circle Plotting.
 4. 3D Function plotting: Sample points will be connected to form  triangles and  displayed over the 3D surface as a filled mesh.
 5. 2D Fractal plotting: Iteration of preset number equations for each point in the viewport and coloring points according to their escape iteration count.
 ## Build
@@ -39,8 +39,20 @@ cmake --build build
 
 .\build\GraphX.exe
 
-## Current Progress and Limitations
-Current UI supports equations presents and input, plot settings and fractal settings, but these controls do not yet produce rendered graphs or fractals. The scene renderer and snapshot handlin are unfinished.
+## Implemented
+
+- CPU pixel buffer and DDA/Bresenham line algorithms
+- Midpoint circle drawing and scanline polygon filling
+- 2D plotting controls for line, parabola, sine, cosine, and circle
+- Coordinate grid, axes, and numeric axis labels
+- Optional fill beneath a 2D curve
+- Snapshot Saving
+
+## Inprogress and Limitation
+- 3D Explicit function plotting
+- 2D Fractals Plotting
+- Camera navigation like zooming, e.t.c
+- 2D Graph plotting uses preset functions, arbitrary equation input not yet supported
 
 ## Evidence Screenshots
 ![GraphX application screenshot](docs/screenshots/image.png)
