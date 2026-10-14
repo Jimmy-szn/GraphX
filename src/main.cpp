@@ -8,6 +8,7 @@
 
 
 #include "Rasterization/rasterizer.h"
+#include "fractal/fractal_cpu.h"
 #include "app_state.h"
 #include "ui/ui_panel.h"
 #include <algorithm>
@@ -145,6 +146,15 @@ int main() {
 
   AppState state;
 
+  // Fractal explorer state (Tracy)
+  fractal::View fview;
+  bool fractalDirty = true;
+  bool wasFractalMode = false;
+  bool draggingFractal = false;
+  FractalType lastFractal = FractalType::Mandelbrot;
+  int lastIter = -1, lastDepth = -1;
+  float lastRe = 0.0f, lastIm = 0.0f;
+
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -192,6 +202,107 @@ int main() {
         }
         drawList->AddText(ImVec2(axisScreenX + 4.0f, axisScreenY + 4.0f), labelColor, "(0,0)");
     }
+
+    // ---- Fractal explorer (pure C++: PixelBuffer -> texture, like the 2D plotter) ----
+    if (state.mode == AppMode::FractalExplorer) {
+      const bool escapeTime = state.fractal == FractalType::Mandelbrot ||
+                              state.fractal == FractalType::Julia;
+      const auto defaultView = [&]() {
+        return state.fractal == FractalType::Julia ? fractal::View{0.0, 0.0, 1.5}
+                                                   : fractal::View{};
+      };
+
+      // Same on-screen placement as the 2D plotter
+      ImGuiIO &io = ImGui::GetIO();
+      const ImVec2 display = io.DisplaySize;
+      const float availableWidth = display.x - ui::PANEL_WIDTH;
+      const float scale =
+          std::min(availableWidth / canvasWidth, display.y / canvasHeight);
+      const ImVec2 size(canvasWidth * scale, canvasHeight * scale);
+      const ImVec2 topleft(ui::PANEL_WIDTH + (availableWidth - size.x) * 0.5f,
+                           (display.y - size.y) * 0.5f);
+
+      // The canvas must be redrawn when we enter this mode or a setting changes
+      if (!wasFractalMode) fractalDirty = true;
+      wasFractalMode = true;
+      if (state.fractal != lastFractal) {
+        fview = defaultView();
+        fractalDirty = true;
+      }
+      if (state.maxIterations != lastIter || state.fractalDepth != lastDepth ||
+          state.juliaRe != lastRe || state.juliaIm != lastIm)
+        fractalDirty = true;
+      lastFractal = state.fractal;
+      lastIter = state.maxIterations;
+      lastDepth = state.fractalDepth;
+      lastRe = state.juliaRe;
+      lastIm = state.juliaIm;
+
+      if (escapeTime) {
+        // Overlay buttons
+        if (state.resetViewRequested) { fview = defaultView(); fractalDirty = true; }
+        if (state.zoomRequest != 0) {
+          fractal::zoomView(fview, canvasWidth / 2.0, canvasHeight / 2.0,
+                            state.zoomRequest > 0 ? 0.7 : 1.0 / 0.7,
+                            canvasWidth, canvasHeight);
+          fractalDirty = true;
+        }
+        // Mouse: drag to pan, wheel to zoom at the cursor
+        const double mx = (io.MousePos.x - topleft.x) / size.x * canvasWidth;
+        const double my = (io.MousePos.y - topleft.y) / size.y * canvasHeight;
+        const bool inside = mx >= 0 && my >= 0 && mx < canvasWidth && my < canvasHeight;
+        const bool uiFree = !io.WantCaptureMouse;
+        if (io.MouseClicked[0] && inside && uiFree) draggingFractal = true;
+        if (!io.MouseDown[0]) draggingFractal = false;
+        if (draggingFractal) {
+          fractal::panView(fview, io.MouseDelta.x * canvasWidth / size.x,
+                           io.MouseDelta.y * canvasHeight / size.y,
+                           canvasWidth, canvasHeight);
+          fractalDirty = true;
+        }
+        if (inside && uiFree && io.MouseWheel != 0.0f) {
+          fractal::zoomView(fview, mx, my, std::pow(0.85, io.MouseWheel),
+                            canvasWidth, canvasHeight);
+          fractalDirty = true;
+        }
+        fview.scale = std::clamp(fview.scale, 1e-12, 4.0);   // double precision limit
+      }
+
+      if (fractalDirty) {
+        switch (state.fractal) {
+        case FractalType::Mandelbrot:
+          fractal::renderEscapeTime(canvas, fractal::Kind::Mandelbrot, fview,
+                                    state.maxIterations);
+          break;
+        case FractalType::Julia:
+          fractal::renderEscapeTime(canvas, fractal::Kind::Julia, fview,
+                                    state.maxIterations, state.juliaRe, state.juliaIm);
+          break;
+        case FractalType::Koch:
+          canvas.clear({18, 20, 24, 255});
+          fractal::drawKochSnowflake(canvas, 320, 240, 190, state.fractalDepth,
+                                     {80, 190, 255, 255});
+          break;
+        case FractalType::Sierpinski:
+          canvas.clear({18, 20, 24, 255});
+          fractal::drawSierpinski(canvas, 320, 280, 200, state.fractalDepth,
+                                  {90, 220, 130, 255});
+          break;
+        }
+        glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA,
+                        GL_UNSIGNED_BYTE, canvas.data());
+        fractalDirty = false;
+      }
+
+      ImGui::GetBackgroundDrawList()->AddImage(
+          static_cast<ImTextureID>(rasterizerTexture), topleft,
+          ImVec2(topleft.x + size.x, topleft.y + size.y),
+          ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    } else {
+      wasFractalMode = false;
+    }
+
     // Full window clear (this is the panel background)
     int fbW = 0, fbH = 0;
     glfwGetFramebufferSize(window, &fbW, &fbH);
@@ -216,8 +327,9 @@ int main() {
       // TODO (Gerald): switch on state.mode here
       // TODO (Daniel): draw the 3D surface using `vp.aspect()` and the plotter
       // fields
-      // TODO (Tracy):  draw the fractal canvas using the fractal fields
+      // (Tracy): fractal canvas is drawn in the "Fractal explorer" block above
       // TODO (Naomi):  use state.zoomRequest / state.resetViewRequested
+      //                (in FractalExplorer mode the fractal block already handles them)
 
       glDisable(GL_SCISSOR_TEST);
     }
