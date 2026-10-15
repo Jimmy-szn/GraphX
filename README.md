@@ -47,15 +47,17 @@ cmake --build build
 - Coordinate grid, axes, and numeric axis labels
 - Optional fill beneath a 2D curve
 - Snapshot Saving
+- 2D Fractals Plotting
 
 ## Inprogress and Limitation
 - 3D Explicit function plotting
-- 2D Fractals Plotting
 - Camera navigation like zooming, e.t.c
 - 2D Graph plotting uses preset functions, arbitrary equation input not yet supported
 
 ## Evidence Screenshots
 ![GraphX application screenshot](docs/screenshots/image.png)
+![GraphX application screenshot2](docs/screenshots/graphx_screenshot_2.png)
+
 
 
 
