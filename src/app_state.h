@@ -6,7 +6,7 @@ enum class PlotView   { Graph2D, Surface3D};
 enum class Graph2DPlot { Line, Parabola, Sine, Cosine, Circle };
 enum class RasterLineAlgorithm { DDA, Bresenham };
 enum class ViewMode    { Wireframe, Surface };
-enum class FractalType { Mandelbrot, Julia };
+enum class FractalType { Mandelbrot, Julia, Koch, Sierpinski };
 
 // The scene area in framebuffer pixels, origin at the bottom-left
 struct SceneViewport {
@@ -43,6 +43,7 @@ struct AppState {
     int      maxIterations = 100;
     float    juliaRe = -0.8f;
     float    juliaIm = 0.156f;
+    int      fractalDepth = 3;                        // recursion depth for Koch / Sierpinski
 
     //One-frame requests
     bool equationChanged    = false;   // Enter, Plot button, or a preset was chosen

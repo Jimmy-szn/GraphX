@@ -28,8 +28,9 @@ const Preset kPresets[] = {
 const int kPresetCount =
     static_cast<int>(sizeof(kPresets) / sizeof(kPresets[0]));
 
-// Add a name here and in FractalType
-const char *kFractalNames[] = {"Mandelbrot", "Julia"};
+// Add a name here and in FractalType (same order as the enum)
+const char *kFractalNames[] = {"Mandelbrot", "Julia", "Koch Snowflake",
+                               "Sierpinski Triangle"};
 const int kFractalCount =
     static_cast<int>(sizeof(kFractalNames) / sizeof(kFractalNames[0]));
 
@@ -185,14 +186,23 @@ void drawFractalControls(AppState &s) {
   ImGui::Combo("##fractal", &f, kFractalNames, kFractalCount);
   s.fractal = static_cast<FractalType>(f);
 
-  ImGui::SeparatorText("Iterations");
-  ImGui::SetNextItemWidth(-1);
-  ImGui::SliderInt("##iter", &s.maxIterations, 10, 1000, "Max iterations: %d");
+  const bool escapeTime = s.fractal == FractalType::Mandelbrot ||
+                          s.fractal == FractalType::Julia;
+  if (escapeTime) {
+    ImGui::SeparatorText("Iterations");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::SliderInt("##iter", &s.maxIterations, 10, 1000,
+                     "Max iterations: %d");
 
-  if (s.fractal == FractalType::Julia) {
-    ImGui::SeparatorText("Julia Constant");
-    ImGui::SliderFloat("Re(c)", &s.juliaRe, -2.0f, 2.0f);
-    ImGui::SliderFloat("Im(c)", &s.juliaIm, -2.0f, 2.0f);
+    if (s.fractal == FractalType::Julia) {
+      ImGui::SeparatorText("Julia Constant");
+      ImGui::SliderFloat("Re(c)", &s.juliaRe, -2.0f, 2.0f);
+      ImGui::SliderFloat("Im(c)", &s.juliaIm, -2.0f, 2.0f);
+    }
+  } else {
+    ImGui::SeparatorText("Recursion");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::SliderInt("##depth", &s.fractalDepth, 0, 6, "Depth: %d");
   }
 }
 
