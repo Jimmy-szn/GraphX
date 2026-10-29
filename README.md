@@ -26,12 +26,12 @@ An iterative math visualization C++/OpenGL application that provides an interact
 - Ninja
 - Dear ImGui
 ## Graphical Techniques and Algorithims
-Planned use of Line, Circle and Polygon algorrithms:
 1.  DDA/ Bresenham Line algoritm have been used to determine which pixels form a line in the 2D graph plotting.
 2. Scan Line Polygon fill will be used to fill interiors of drawn polyons.
 3. Midpoint Circle Algorithm has been used to plot circle pixels in Circle Plotting.
 4. 3D Function plotting: Sample points will be connected to form  triangles and  displayed over the 3D surface as a filled mesh.
 5. 2D Fractal plotting: Iteration of preset number equations for each point in the viewport and coloring points according to their escape iteration count.
+6. Tweening for smooth view transitions
 ## Build
 
 cmake -s, B build -G Ninja
@@ -48,6 +48,7 @@ cmake --build build
 - Optional fill beneath a 2D curve
 - Snapshot Saving
 - 2D Fractals Plotting
+- Tweening for smooth view transitions
 
 ## Inprogress and Limitation
 - 3D Explicit function plotting
