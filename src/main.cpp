@@ -1,5 +1,6 @@
 #include "UI/ui_panel.h"
 #include <cstddef>
+#include <cstdlib>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
 #include <cstdio>
@@ -147,17 +148,22 @@ int main() {
   AppState state;
 
   // Fractal explorer state (Tracy)
-  fractal::View fview;
+  fractal::View fview = { 0.0, 0.0, 1.0 };
+  fractal::View targetFview = { 0.0, 0.0, 1.0 };
+
   bool fractalDirty = true;
   bool wasFractalMode = false;
   bool draggingFractal = false;
   FractalType lastFractal = FractalType::Mandelbrot;
   int lastIter = -1, lastDepth = -1;
   float lastRe = 0.0f, lastIm = 0.0f;
+  double lastTime = glfwGetTime();
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
-
+    double currentTime = glfwGetTime();
+    double deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
     ui::beginFrame();
     ui::drawPanel(state);
     ui::drawViewportOverlay(state);
@@ -223,10 +229,15 @@ int main() {
                            (display.y - size.y) * 0.5f);
 
       // The canvas must be redrawn when we enter this mode or a setting changes
-      if (!wasFractalMode) fractalDirty = true;
+      if (!wasFractalMode) {
+        fview = defaultView();
+        fractalDirty = true;
+        targetFview = fview;
+      }
       wasFractalMode = true;
       if (state.fractal != lastFractal) {
         fview = defaultView();
+        targetFview = fview;
         fractalDirty = true;
       }
       if (state.maxIterations != lastIter || state.fractalDepth != lastDepth ||
@@ -240,9 +251,9 @@ int main() {
 
       if (escapeTime) {
         // Overlay buttons
-        if (state.resetViewRequested) { fview = defaultView(); fractalDirty = true; }
+        if (state.resetViewRequested) { targetFview = defaultView(); fractalDirty = true; }
         if (state.zoomRequest != 0) {
-          fractal::zoomView(fview, canvasWidth / 2.0, canvasHeight / 2.0,
+          fractal::zoomView(targetFview, canvasWidth / 2.0, canvasHeight / 2.0,
                             state.zoomRequest > 0 ? 0.7 : 1.0 / 0.7,
                             canvasWidth, canvasHeight);
           fractalDirty = true;
@@ -255,19 +266,31 @@ int main() {
         if (io.MouseClicked[0] && inside && uiFree) draggingFractal = true;
         if (!io.MouseDown[0]) draggingFractal = false;
         if (draggingFractal) {
-          fractal::panView(fview, io.MouseDelta.x * canvasWidth / size.x,
+          fractal::panView(targetFview, io.MouseDelta.x * canvasWidth / size.x,
                            io.MouseDelta.y * canvasHeight / size.y,
                            canvasWidth, canvasHeight);
           fractalDirty = true;
         }
         if (inside && uiFree && io.MouseWheel != 0.0f) {
-          fractal::zoomView(fview, mx, my, std::pow(0.85, io.MouseWheel),
+          fractal::zoomView(targetFview, mx, my, std::pow(0.85, io.MouseWheel),
                             canvasWidth, canvasHeight);
           fractalDirty = true;
         }
-        fview.scale = std::clamp(fview.scale, 1e-12, 4.0);   // double precision limit
+        targetFview.scale = std::clamp(targetFview.scale, 1e-12, 4.0);   // double precision limit
       }
-
+      double easeFactor = 1.0 - std::exp(-15.0 * deltaTime); // how snapy the easing feels
+      double oldCenterX = fview.centerX;
+      double oldCenterY = fview.centerY;
+      double oldScale = fview.scale;
+      fview.centerX += (targetFview.centerX - fview.centerX) * easeFactor;
+      fview.centerY += (targetFview.centerY - fview.centerY) * easeFactor;
+      fview.scale += (targetFview.scale - fview.scale) * easeFactor;
+      const double epsilon = 1e-12; // small value to prevent floating-point issues
+      if(std::abs(fview.centerX - targetFview.centerX) > epsilon ||
+         std::abs(fview.centerY - targetFview.centerY) > epsilon ||
+         std::abs(fview.scale - targetFview.scale) > epsilon) {
+        fractalDirty = true;
+      }
       if (fractalDirty) {
         switch (state.fractal) {
         case FractalType::Mandelbrot:
