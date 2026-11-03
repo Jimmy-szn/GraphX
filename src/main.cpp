@@ -150,7 +150,7 @@ int main() {
   // Fractal explorer state (Tracy)
   fractal::View fview = { 0.0, 0.0, 1.0 };
   fractal::View targetFview = { 0.0, 0.0, 1.0 };
-
+  bool animateColors = true;
   bool fractalDirty = true;
   bool wasFractalMode = false;
   bool draggingFractal = false;
@@ -158,15 +158,21 @@ int main() {
   int lastIter = -1, lastDepth = -1;
   float lastRe = 0.0f, lastIm = 0.0f;
   double lastTime = glfwGetTime();
-
+  
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     double currentTime = glfwGetTime();
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
+    static double colorTime = 0.0;
+    double colorSpeed = 2.5;
+    if (animateColors) {
+        colorTime += deltaTime * colorSpeed;
+    }
     ui::beginFrame();
     ui::drawPanel(state);
     ui::drawViewportOverlay(state);
+   
     if (state.mode == AppMode::FunctionPlotter && state.plotView==PlotView::Graph2D) {
         renderGraph2D(canvas, state);   
         glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
@@ -285,7 +291,7 @@ int main() {
       fview.centerX += (targetFview.centerX - fview.centerX) * easeFactor;
       fview.centerY += (targetFview.centerY - fview.centerY) * easeFactor;
       fview.scale += (targetFview.scale - fview.scale) * easeFactor;
-      const double epsilon = 1e-12; // small value to prevent floating-point issues
+      const double epsilon = 1e-14; // small value to prevent floating-point issues
       if(std::abs(fview.centerX - targetFview.centerX) > epsilon ||
          std::abs(fview.centerY - targetFview.centerY) > epsilon ||
          std::abs(fview.scale - targetFview.scale) > epsilon) {
@@ -295,11 +301,11 @@ int main() {
         switch (state.fractal) {
         case FractalType::Mandelbrot:
           fractal::renderEscapeTime(canvas, fractal::Kind::Mandelbrot, fview,
-                                    state.maxIterations);
+                                    state.maxIterations, colorTime);
           break;
         case FractalType::Julia:
           fractal::renderEscapeTime(canvas, fractal::Kind::Julia, fview,
-                                    state.maxIterations, state.juliaRe, state.juliaIm);
+                                    state.maxIterations, state.juliaRe, state.juliaIm, colorTime);
           break;
         case FractalType::Koch:
           canvas.clear({18, 20, 24, 255});
