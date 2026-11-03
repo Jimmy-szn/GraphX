@@ -8,8 +8,6 @@ namespace {
 
 struct P { double x, y; };
 struct V {double centerX, centerY, scale;};
-View currentView = { 0.0, 0.0, 1.0 };
-View targetView = { 0.0, 0.0, 1.0 };
 
 // Smooth cosine palette: t is a continuous iteration count.
 Color palette(double t) {
@@ -66,9 +64,9 @@ void sierpinskiRec(PixelBuffer& buf, P a, P b, P c, int depth, Color color) {
 } // namespace
 
 void renderEscapeTime(PixelBuffer& buffer, Kind kind, const View& view,
-                      int maxIter, double juliaRe, double juliaIm) {
+                      int maxIter, double juliaRe, double juliaIm, double colorTime) {
     const int w = buffer.width();
-    const int h = buffer.height();
+    const int h = buffer.height();   
     if (w <= 0 || h <= 0 || maxIter <= 0) return;
 
     const double aspect = static_cast<double>(w) / h;
@@ -100,7 +98,7 @@ void renderEscapeTime(PixelBuffer& buffer, Kind kind, const View& view,
                 buffer.setPixel(x, y, Color{ 0, 0, 0, 255 });
             } else {
                 const double mu = i - std::log2(std::log2(zr2 + zi2)) + 4.0;
-                buffer.setPixel(x, y, palette(mu));
+                buffer.setPixel(x, y, palette(mu + colorTime));
             }
         }
     }
@@ -131,22 +129,7 @@ void drawSierpinski(PixelBuffer& buffer, int centerX, int centerY,
     }
     sierpinskiRec(buffer, v[0], v[1], v[2], depth, color);
 }
-void onScroll(double px, double py, double factor, int width, int height) {
-    const double aspect = static_cast<double>(width) / height;
-    const double nx = (px / width * 2.0 - 1.0) * aspect;
-    const double ny = 1.0 - py / height * 2.0;
-    const double fx = currentView.centerX + nx * currentView.scale;
-    const double fy = currentView.centerY + ny * currentView.scale;
-    currentView.scale *= factor;
-    currentView.centerX = fx - nx * currentView.scale;
-    currentView.centerY = fy - ny * currentView.scale;
-}
-void updateAnimation(double deltaTime) {
-    const double t = 1.0 - std::exp(deltaTime * -5.0); // smooth interpolation to control how snapy the easing feels
-    currentView.centerX += (targetView.centerX - currentView.centerX) * t;
-    currentView.centerY += (targetView.centerY - currentView.centerY) * t;
-    currentView.scale += (targetView.scale - currentView.scale) * t;
-}
+
 void panView(View& view, double dxPixels, double dyPixels, int /*width*/, int height) {
     const double unitsPerPixel = 2.0 * view.scale / height;
     view.centerX -= dxPixels * unitsPerPixel;   // image follows the cursor

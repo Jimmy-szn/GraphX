@@ -22,7 +22,7 @@ enum class Kind { Mandelbrot, Julia };
 // by how quickly |z| escapes. Mandelbrot: z0 = 0, c = pixel. Julia: z0 = pixel, c = (juliaRe, juliaIm).
 // Pixels that never escape within maxIter are drawn black.
 void renderEscapeTime(PixelBuffer& buffer, Kind kind, const View& view,
-                      int maxIter, double juliaRe = -0.8, double juliaIm = 0.156);
+                      int maxIter, double juliaRe = -0.8, double juliaIm = 0.156, double colorTime = 0.0);
 
 // Koch snowflake: recursive line subdivision, each segment drawn with Bresenham.
 // radius = distance from centre to the triangle's corners (pixels); depth 0 = plain triangle.
