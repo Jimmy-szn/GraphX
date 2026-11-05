@@ -42,7 +42,7 @@ cmake --build build
 #### Incase of an issue/error using -G Ninja in the regular terminal
 Run these four commands one at a time, with no -G Ninja:
 
-Remove-Item -Recurse -Force build
+Remove-Item -Recurse -Force build        //(if the build folder isn't deleted already)
 cmake -S . -B build
 cmake --build build
 .\build\Debug\GraphX.exe
