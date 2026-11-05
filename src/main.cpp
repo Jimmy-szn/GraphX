@@ -10,6 +10,7 @@
 
 #include "Rasterization/rasterizer.h"
 #include "fractal/fractal_cpu.h"
+#include "surface/surface.h"
 #include "app_state.h"
 #include "ui/ui_panel.h"
 #include <algorithm>
@@ -144,6 +145,7 @@ int main() {
   // ui::init() keeps them and calls them after ImGui. If they are installed
   // later, they replace ImGui's callbacks and the panel stops responding.
   ui::init(window);
+  surface::init();
 
   AppState state;
 
@@ -353,9 +355,12 @@ int main() {
       } 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+      // (Daniel): 3D surface plotter
+      if (state.mode == AppMode::FunctionPlotter && state.plotView == PlotView::Surface3D) {
+        surface::render(state, vp, deltaTime);
+      }
+
       // TODO (Gerald): switch on state.mode here
-      // TODO (Daniel): draw the 3D surface using `vp.aspect()` and the plotter
-      // fields
       // (Tracy): fractal canvas is drawn in the "Fractal explorer" block above
       // TODO (Naomi):  use state.zoomRequest / state.resetViewRequested
       //                (in FractalExplorer mode the fractal block already handles them)
@@ -378,6 +383,7 @@ int main() {
     state.clearRequests();
   }
 
+  surface::shutdown();
   ui::shutdown();
   glDeleteTextures(1, &rasterizerTexture);
   glfwDestroyWindow(window);
