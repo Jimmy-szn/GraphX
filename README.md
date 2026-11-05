@@ -57,15 +57,18 @@ cmake --build build
 - Snapshot Saving
 - 2D Fractals Plotting
 - Tweening for smooth view transitions
-
-## Inprogress and Limitation
 - 3D Explicit function plotting
 - Camera navigation like zooming, e.t.c
+
+## Inprogress and Limitation
 - 2D Graph plotting uses preset functions, arbitrary equation input not yet supported
 
 ## Evidence Screenshots
 ![GraphX application screenshot](docs/screenshots/image.png)
 ![GraphX application screenshot2](docs/screenshots/graphx_screenshot_2.png)
+![GraphX application screenshot3](docs/screenshots/3dCustomPlot.png)
+![GraphX application screenshot3](docs/screenshots/3dRipple.png)
+![GraphX application screenshot4](docs/screenshots/3dSineCosine.png)
 
 
 
