@@ -39,6 +39,14 @@ cmake --build build
 
 .\build\GraphX.exe
 
+#### Incase of an issue/error using -G Ninja in the regular terminal
+Run these four commands one at a time, with no -G Ninja:
+
+Remove-Item -Recurse -Force build
+cmake -S . -B build
+cmake --build build
+.\build\Debug\GraphX.exe
+
 ## Implemented
 
 - CPU pixel buffer and DDA/Bresenham line algorithms
