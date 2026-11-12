@@ -3,7 +3,7 @@
 
 enum class AppMode     { FunctionPlotter, FractalExplorer };
 enum class PlotView   { Graph2D, Surface3D};
-enum class Graph2DPlot { Line, Parabola, Sine, Cosine, Circle };
+enum class Graph2DPlot { Line, Parabola, Sine, Cosine, Circle, Custom };
 enum class RasterLineAlgorithm { DDA, Bresenham };
 enum class ViewMode    { Wireframe, Surface };
 enum class FractalType { Mandelbrot, Julia, Koch, Sierpinski };
@@ -26,6 +26,7 @@ struct AppState {
 
     //Function plotter controls
     char     equation[256] = "a*sin(x) + b*cos(y)";   // right side of z = f(x,y)
+    char     equation2D[256] = "a*sin(x) + b*cos(x)"; // right side of y = f(x)
     float    paramA = 1.5f;
     float    paramB = 0.8f;
     float    lineSlope = 0.75f;
@@ -37,7 +38,7 @@ struct AppState {
     int      resolution = 100;                        // grid points per axis
 
     std::string equationError;
-
+    std::string equation2DError;
     //Fractal controls
     FractalType fractal = FractalType::Mandelbrot;
     int      maxIterations = 100;
@@ -47,6 +48,7 @@ struct AppState {
 
     //One-frame requests
     bool equationChanged    = false;   // Enter, Plot button, or a preset was chosen
+    bool equation2DChanged  = false;   // Enter, Plot button, or a preset was chosen
     bool paramsChanged      = false;   // a/b slider moved, or resolution released
     bool resetViewRequested = false;   // Reset View button
     int  zoomRequest        = 0;       // -1 zoom out, +1 zoom in
@@ -58,6 +60,7 @@ struct AppState {
 
     void clearRequests() {
         equationChanged = false;
+        equation2DChanged = false;
         paramsChanged = false;
         resetViewRequested = false;
         zoomRequest = 0;

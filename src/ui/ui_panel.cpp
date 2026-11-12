@@ -89,10 +89,34 @@ void drawPlotterControls(AppState &s) {
     int plotType = static_cast<int>(s.graph2DPlot);
     ImGui::Combo("Plot", &plotType,
                  "Line y=mx+c\0Parabola y=x^2\0Sine y=sin(x)\0Cosine "
-                 "y=cos(x)\0Circle\0");
+                 "y=cos(x)\0Circle\0Custom y = f(x)\0");
     s.graph2DPlot = static_cast<Graph2DPlot>(plotType);
+    ImGui::SeparatorText("Equation: y =");
+    ImGui::SetNextItemWidth(-1);
+
+    if (ImGui::InputTextWithHint(
+            "##equation2D",
+            "e.g. sin(x), x^2, 1/x",
+            s.equation2D,
+            sizeof(s.equation2D),
+            ImGuiInputTextFlags_EnterReturnsTrue)) {
+      s.equation2DChanged = true;
+      s.graph2DPlot = Graph2DPlot::Custom;
+    }
+
+    if (ImGui::Button("Plot Equation", ImVec2(-1, 0))) {
+      s.equation2DChanged = true;
+      s.graph2DPlot = Graph2DPlot::Custom;
+    }
+
+    if (!s.equation2DError.empty()) {
+      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.45f, 0.45f, 1.0f));
+      ImGui::TextWrapped("%s", s.equation2DError.c_str());
+      ImGui::PopStyleColor();
+    }
     if (s.graph2DPlot == Graph2DPlot::Circle) {
       ImGui::SliderInt("Radius", &s.circleRadius, 1, 5);
+
     } else {
       int algorithm = static_cast<int>(s.rasterLineAlgorithm);
       ImGui::RadioButton("DDA", &algorithm, 0);
