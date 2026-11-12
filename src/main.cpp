@@ -1,24 +1,27 @@
 #include "UI/ui_panel.h"
+#include "math_expression.h"
 #include <cstddef>
 #include <cstdlib>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
-#include <cstdio>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <cstdio>
 
 
 #include "Rasterization/rasterizer.h"
+#include "app_state.h"
 #include "fractal/fractal_cpu.h"
 #include "surface/surface.h"
-#include "app_state.h"
 #include "ui/ui_panel.h"
 #include <algorithm>
 #include <cmath>
 #include <imgui.h>
 #include <iostream>
 #include <vector>
-void renderGraph2D(rasterization::PixelBuffer &canvas, const AppState &state) {
+
+void renderGraph2D(rasterization::PixelBuffer &canvas, const AppState &state,
+                   const math_expression::Node *customExpr) {
   constexpr int pixelsPerUnit = 40;
   const float xMin = -canvas.width() / (2.0f * pixelsPerUnit);
   const float xMax = canvas.width() / (2.0f * pixelsPerUnit);
@@ -45,28 +48,29 @@ void renderGraph2D(rasterization::PixelBuffer &canvas, const AppState &state) {
   const auto evaluateY = [&](float x) {
     switch (state.graph2DPlot) {
     case Graph2DPlot::Line:
-        return state.lineSlope * x + state.lineIntercept;
+      return state.lineSlope * x + state.lineIntercept;
     case Graph2DPlot::Parabola:
-        return x * x;
+      return x * x;
     case Graph2DPlot::Sine:
-        return std::sin(x);
+      return std::sin(x);
     case Graph2DPlot::Cosine:
-        return std::cos(x);
+      return std::cos(x);
     case Graph2DPlot::Circle:
-        return 0.0f; // Circle is drawn separately with the midpoint algorithm.
+      return 0.0f; // Circle is drawn separately with the midpoint algorithm.
     }
     return 0.0f;
-};
-std::vector<rasterization::Point> curvePoints;
-curvePoints.reserve(canvas.width());
-for (int pixelX = 0; pixelX < canvas.width(); ++pixelX) {
+  };
+  std::vector<rasterization::Point> curvePoints;
+  curvePoints.reserve(canvas.width());
+  for (int pixelX = 0; pixelX < canvas.width(); ++pixelX) {
     float x = xMin + (xMax - xMin) * pixelX / (canvas.width() - 1);
     float y = evaluateY(x);
     curvePoints.push_back({toPixelX(x), toPixelY(y)});
-}
-  if (state.graph2DPlot!=Graph2DPlot::Circle && state.fillUnderCurve) {
+  }
+  if (state.graph2DPlot != Graph2DPlot::Circle &&
+      state.graph2DPlot != Graph2DPlot::Custom && state.fillUnderCurve) {
     std::vector<rasterization::Point> fillPoints;
-    fillPoints.reserve(curvePoints.size()+2);
+    fillPoints.reserve(curvePoints.size() + 2);
     fillPoints.push_back({0, toPixelY(0.0f)});
     fillPoints.insert(fillPoints.end(), curvePoints.begin(), curvePoints.end());
     fillPoints.push_back({toPixelX(xMax), toPixelY(0.0f)});
@@ -78,7 +82,6 @@ for (int pixelX = 0; pixelX < canvas.width(); ++pixelX) {
     for (int x = 0; x < canvas.width(); x += pixelsPerUnit) {
       rasterization::drawLineBresenham(canvas, x, 0, x, canvas.height() - 1,
                                        grid);
-      
     }
     for (int y = 0; y < canvas.height(); y += pixelsPerUnit) {
       rasterization::drawLineBresenham(canvas, 0, y, canvas.width() - 1, y,
@@ -90,11 +93,37 @@ for (int pixelX = 0; pixelX < canvas.width(); ++pixelX) {
   rasterization::drawLineBresenham(canvas, 0.0f, toPixelY(0.0f),
                                    canvas.width() - 1, toPixelY(0.0f), axis);
   if (state.graph2DPlot == Graph2DPlot::Circle) {
-    rasterization::drawCircleMidpoint(canvas, toPixelX(0), toPixelY(0), state.circleRadius*pixelsPerUnit,{80, 190, 255, 255});
-  }
-  else{
-    for(std::size_t i = 1; i < curvePoints.size(); ++i) {
-        line(curvePoints[i-1].x, curvePoints[i-1].y, curvePoints[i].x, curvePoints[i].y, {90, 220, 130, 255});
+    rasterization::drawCircleMidpoint(canvas, toPixelX(0), toPixelY(0),
+                                      state.circleRadius * pixelsPerUnit,
+                                      {80, 190, 255, 255});
+  } else if (state.graph2DPlot == Graph2DPlot::Custom && customExpr) {
+    bool previousValid = false;
+    rasterization::Point previous{};
+
+    for (int pixelX = 0; pixelX < canvas.width(); ++pixelX) {
+      const double x = xMin + (xMax - xMin) * pixelX / (canvas.width() - 1);
+      const double y = math_expression::evaluate(customExpr, x, 0.0,
+                                                 state.paramA, state.paramB);
+
+      if (!std::isfinite(y) || y < yMin || y > yMax) {
+        previousValid = false;
+        continue;
+      }
+
+      rasterization::Point current{toPixelX(static_cast<float>(x)),
+                                   toPixelY(static_cast<float>(y))};
+
+      if (previousValid) {
+        line(previous.x, previous.y, current.x, current.y, {90, 220, 130, 255});
+      }
+
+      previous = current;
+      previousValid = true;
+    }
+  } else {
+    for (std::size_t i = 1; i < curvePoints.size(); ++i) {
+      line(curvePoints[i - 1].x, curvePoints[i - 1].y, curvePoints[i].x,
+           curvePoints[i].y, {90, 220, 130, 255});
     }
   }
 }
@@ -131,7 +160,7 @@ int main() {
   constexpr int canvasHeight = 480;
   rasterization::PixelBuffer canvas(canvasWidth, canvasHeight);
   canvas.clear({18, 20, 24, 255});
-  
+
   GLuint rasterizerTexture = 0;
   glGenTextures(1, &rasterizerTexture);
   glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
@@ -148,10 +177,11 @@ int main() {
   surface::init();
 
   AppState state;
+  math_expression::NodePtr custom2DExpr;
 
   // Fractal explorer state (Tracy)
-  fractal::View fview = { 0.0, 0.0, 1.0 };
-  fractal::View targetFview = { 0.0, 0.0, 1.0 };
+  fractal::View fview = {0.0, 0.0, 1.0};
+  fractal::View targetFview = {0.0, 0.0, 1.0};
   bool animateColors = true;
   bool fractalDirty = true;
   bool wasFractalMode = false;
@@ -160,7 +190,7 @@ int main() {
   int lastIter = -1, lastDepth = -1;
   float lastRe = 0.0f, lastIm = 0.0f;
   double lastTime = glfwGetTime();
-  
+
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     double currentTime = glfwGetTime();
@@ -169,61 +199,83 @@ int main() {
     static double colorTime = 0.0;
     double colorSpeed = 2.5;
     if (animateColors) {
-        colorTime += deltaTime * colorSpeed;
+      colorTime += deltaTime * colorSpeed;
     }
     ui::beginFrame();
     ui::drawPanel(state);
+    if (state.equation2DChanged) {
+      std::string error;
+      auto parsed = math_expression::parse(state.equation2D, error);
+
+      if (parsed) {
+        custom2DExpr = std::move(parsed);
+        state.equation2DError.clear();
+      } else {
+        state.equation2DError = error;
+      }
+    }
     ui::drawViewportOverlay(state);
-   
-    if (state.mode == AppMode::FunctionPlotter && state.plotView==PlotView::Graph2D) {
-        renderGraph2D(canvas, state);   
-        glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA,
-                        GL_UNSIGNED_BYTE, canvas.data());
-        const ImVec2 display = ImGui::GetIO().DisplaySize;
-        const float availableWidth = display.x -ui::PANEL_WIDTH;
-        const float scale = std::min(availableWidth / canvasWidth, display.y / canvasHeight);
-        const ImVec2 size(canvasWidth * scale, canvasHeight * scale);
-        const ImVec2 topleft(ui::PANEL_WIDTH +(availableWidth - size.x) * 0.5f, (display.y - size.y) * 0.5f);
-        ImGui::GetBackgroundDrawList()->AddImage(
-            static_cast<ImTextureID>(rasterizerTexture),
-            topleft,
-            ImVec2(topleft.x + size.x, topleft.y + size.y),
-            ImVec2(0.0f, 1.0f),
-            ImVec2(1.0f, 0.0f)
-        );
-        auto* drawList = ImGui::GetBackgroundDrawList();
-        const ImU32 labelColor = IM_COL32(190, 195, 205, 255);
-        const float axisScreenX = topleft.x + (canvasWidth / 2.0f)* size.x / canvasWidth;
-        const float axisScreenY = topleft.y + (canvasHeight / 2.0f) * size.y / canvasHeight;
-        for (int value = -7; value <= 7; ++value) {
-            if(value ==0) continue;
-            const float pixelX = canvasWidth / 2.0f + value * 40.0f;
-            const float screenX = topleft.x + pixelX * size.x / canvasWidth;
-            char label[8];
-            std::snprintf(label, sizeof(label), "%d", value);
-            const ImVec2 textSize = ImGui::CalcTextSize(label);
-            drawList->AddText(ImVec2(screenX - textSize.x * 0.5f, axisScreenY + 2.0f), labelColor, label);
-        }
-        for (int value = -5; value <= 5; ++value) {
-            if(value ==0) continue;
-            const float pixelY = canvasHeight / 2.0f + value * 40.0f;
-            const float screenY = topleft.y + pixelY * size.y / canvasHeight;
-            char label[8];
-            std::snprintf(label, sizeof(label), "%d", value);
-            const ImVec2 textSize = ImGui::CalcTextSize(label);
-            drawList->AddText(ImVec2(axisScreenX - textSize.x - 5.0f, screenY - textSize.y * 0.5f), labelColor, label);
-        }
-        drawList->AddText(ImVec2(axisScreenX + 4.0f, axisScreenY + 4.0f), labelColor, "(0,0)");
+
+    if (state.mode == AppMode::FunctionPlotter &&
+        state.plotView == PlotView::Graph2D) {
+      renderGraph2D(canvas, state, custom2DExpr.get());
+      glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight,
+                      GL_RGBA, GL_UNSIGNED_BYTE, canvas.data());
+      const ImVec2 display = ImGui::GetIO().DisplaySize;
+      const float availableWidth = display.x - ui::PANEL_WIDTH;
+      const float scale =
+          std::min(availableWidth / canvasWidth, display.y / canvasHeight);
+      const ImVec2 size(canvasWidth * scale, canvasHeight * scale);
+      const ImVec2 topleft(ui::PANEL_WIDTH + (availableWidth - size.x) * 0.5f,
+                           (display.y - size.y) * 0.5f);
+      ImGui::GetBackgroundDrawList()->AddImage(
+          static_cast<ImTextureID>(rasterizerTexture), topleft,
+          ImVec2(topleft.x + size.x, topleft.y + size.y), ImVec2(0.0f, 1.0f),
+          ImVec2(1.0f, 0.0f));
+      auto *drawList = ImGui::GetBackgroundDrawList();
+      const ImU32 labelColor = IM_COL32(190, 195, 205, 255);
+      const float axisScreenX =
+          topleft.x + (canvasWidth / 2.0f) * size.x / canvasWidth;
+      const float axisScreenY =
+          topleft.y + (canvasHeight / 2.0f) * size.y / canvasHeight;
+      for (int value = -7; value <= 7; ++value) {
+        if (value == 0)
+          continue;
+        const float pixelX = canvasWidth / 2.0f + value * 40.0f;
+        const float screenX = topleft.x + pixelX * size.x / canvasWidth;
+        char label[8];
+        std::snprintf(label, sizeof(label), "%d", value);
+        const ImVec2 textSize = ImGui::CalcTextSize(label);
+        drawList->AddText(
+            ImVec2(screenX - textSize.x * 0.5f, axisScreenY + 2.0f), labelColor,
+            label);
+      }
+      for (int value = -5; value <= 5; ++value) {
+        if (value == 0)
+          continue;
+        const float pixelY = canvasHeight / 2.0f + value * 40.0f;
+        const float screenY = topleft.y + pixelY * size.y / canvasHeight;
+        char label[8];
+        std::snprintf(label, sizeof(label), "%d", value);
+        const ImVec2 textSize = ImGui::CalcTextSize(label);
+        drawList->AddText(ImVec2(axisScreenX - textSize.x - 5.0f,
+                                 screenY - textSize.y * 0.5f),
+                          labelColor, label);
+      }
+      drawList->AddText(ImVec2(axisScreenX + 4.0f, axisScreenY + 4.0f),
+                        labelColor, "(0,0)");
     }
 
-    // ---- Fractal explorer (pure C++: PixelBuffer -> texture, like the 2D plotter) ----
+    // ---- Fractal explorer (pure C++: PixelBuffer -> texture, like the 2D
+    // plotter) ----
     if (state.mode == AppMode::FractalExplorer) {
       const bool escapeTime = state.fractal == FractalType::Mandelbrot ||
                               state.fractal == FractalType::Julia;
       const auto defaultView = [&]() {
-        return state.fractal == FractalType::Julia ? fractal::View{0.0, 0.0, 1.5}
-                                                   : fractal::View{};
+        return state.fractal == FractalType::Julia
+                   ? fractal::View{0.0, 0.0, 1.5}
+                   : fractal::View{};
       };
 
       // Same on-screen placement as the 2D plotter
@@ -259,7 +311,10 @@ int main() {
 
       if (escapeTime) {
         // Overlay buttons
-        if (state.resetViewRequested) { targetFview = defaultView(); fractalDirty = true; }
+        if (state.resetViewRequested) {
+          targetFview = defaultView();
+          fractalDirty = true;
+        }
         if (state.zoomRequest != 0) {
           fractal::zoomView(targetFview, canvasWidth / 2.0, canvasHeight / 2.0,
                             state.zoomRequest > 0 ? 0.7 : 1.0 / 0.7,
@@ -269,14 +324,17 @@ int main() {
         // Mouse: drag to pan, wheel to zoom at the cursor
         const double mx = (io.MousePos.x - topleft.x) / size.x * canvasWidth;
         const double my = (io.MousePos.y - topleft.y) / size.y * canvasHeight;
-        const bool inside = mx >= 0 && my >= 0 && mx < canvasWidth && my < canvasHeight;
+        const bool inside =
+            mx >= 0 && my >= 0 && mx < canvasWidth && my < canvasHeight;
         const bool uiFree = !io.WantCaptureMouse;
-        if (io.MouseClicked[0] && inside && uiFree) draggingFractal = true;
-        if (!io.MouseDown[0]) draggingFractal = false;
+        if (io.MouseClicked[0] && inside && uiFree)
+          draggingFractal = true;
+        if (!io.MouseDown[0])
+          draggingFractal = false;
         if (draggingFractal) {
           fractal::panView(targetFview, io.MouseDelta.x * canvasWidth / size.x,
-                           io.MouseDelta.y * canvasHeight / size.y,
-                           canvasWidth, canvasHeight);
+                           io.MouseDelta.y * canvasHeight / size.y, canvasWidth,
+                           canvasHeight);
           fractalDirty = true;
         }
         if (inside && uiFree && io.MouseWheel != 0.0f) {
@@ -284,19 +342,22 @@ int main() {
                             canvasWidth, canvasHeight);
           fractalDirty = true;
         }
-        targetFview.scale = std::clamp(targetFview.scale, 1e-12, 4.0);   // double precision limit
+        targetFview.scale =
+            std::clamp(targetFview.scale, 1e-12, 4.0); // double precision limit
       }
-      double easeFactor = 1.0 - std::exp(-15.0 * deltaTime); // how snapy the easing feels
+      double easeFactor =
+          1.0 - std::exp(-15.0 * deltaTime); // how snapy the easing feels
       double oldCenterX = fview.centerX;
       double oldCenterY = fview.centerY;
       double oldScale = fview.scale;
       fview.centerX += (targetFview.centerX - fview.centerX) * easeFactor;
       fview.centerY += (targetFview.centerY - fview.centerY) * easeFactor;
       fview.scale += (targetFview.scale - fview.scale) * easeFactor;
-      const double epsilon = 1e-14; // small value to prevent floating-point issues
-      if(std::abs(fview.centerX - targetFview.centerX) > epsilon ||
-         std::abs(fview.centerY - targetFview.centerY) > epsilon ||
-         std::abs(fview.scale - targetFview.scale) > epsilon) {
+      const double epsilon =
+          1e-14; // small value to prevent floating-point issues
+      if (std::abs(fview.centerX - targetFview.centerX) > epsilon ||
+          std::abs(fview.centerY - targetFview.centerY) > epsilon ||
+          std::abs(fview.scale - targetFview.scale) > epsilon) {
         fractalDirty = true;
       }
       if (fractalDirty) {
@@ -307,7 +368,8 @@ int main() {
           break;
         case FractalType::Julia:
           fractal::renderEscapeTime(canvas, fractal::Kind::Julia, fview,
-                                    state.maxIterations, state.juliaRe, state.juliaIm, colorTime);
+                                    state.maxIterations, state.juliaRe,
+                                    state.juliaIm, colorTime);
           break;
         case FractalType::Koch:
           canvas.clear({18, 20, 24, 255});
@@ -321,15 +383,15 @@ int main() {
           break;
         }
         glBindTexture(GL_TEXTURE_2D, rasterizerTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA,
-                        GL_UNSIGNED_BYTE, canvas.data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight,
+                        GL_RGBA, GL_UNSIGNED_BYTE, canvas.data());
         fractalDirty = false;
       }
 
       ImGui::GetBackgroundDrawList()->AddImage(
           static_cast<ImTextureID>(rasterizerTexture), topleft,
-          ImVec2(topleft.x + size.x, topleft.y + size.y),
-          ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+          ImVec2(topleft.x + size.x, topleft.y + size.y), ImVec2(0.0f, 1.0f),
+          ImVec2(1.0f, 0.0f));
     } else {
       wasFractalMode = false;
     }
@@ -352,31 +414,36 @@ int main() {
         glClearColor(0.05f, 0.09f, 0.17f, 1.0f); // placeholder
       } else {
         glClearColor(0.02f, 0.12f, 0.06f, 1.0f); // placeholder
-      } 
+      }
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
       // (Daniel): 3D surface plotter
-      if (state.mode == AppMode::FunctionPlotter && state.plotView == PlotView::Surface3D) {
+      if (state.mode == AppMode::FunctionPlotter &&
+          state.plotView == PlotView::Surface3D) {
         surface::render(state, vp, deltaTime);
       }
 
       // TODO (Gerald): switch on state.mode here
       // (Tracy): fractal canvas is drawn in the "Fractal explorer" block above
       // TODO (Naomi):  use state.zoomRequest / state.resetViewRequested
-      //                (in FractalExplorer mode the fractal block already handles them)
+      //                (in FractalExplorer mode the fractal block already
+      //                handles them)
 
       glDisable(GL_SCISSOR_TEST);
     }
 
     glViewport(0, 0, fbW, fbH);
     ui::endFrame();
-    if(state.snapshotRequested) {
-        std::vector<unsigned char> pixels(
-            static_cast<std::size_t>(fbW) * fbH * 4);
-        glReadBuffer(GL_BACK);
-        glReadPixels(0, 0, fbW, fbH, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());        
-        const int saved=stbi_write_png("src/snapshots/graphx_screenshot.png", fbW, fbH, 4, pixels.data(), fbW * 4);
-       ui::setStatus(state, saved ? "Screenshot saved: snapshots/graphx_screenshot.png." : "Failed to save screenshot.");
+    if (state.snapshotRequested) {
+      std::vector<unsigned char> pixels(static_cast<std::size_t>(fbW) * fbH *
+                                        4);
+      glReadBuffer(GL_BACK);
+      glReadPixels(0, 0, fbW, fbH, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+      const int saved = stbi_write_png("src/snapshots/graphx_screenshot.png",
+                                       fbW, fbH, 4, pixels.data(), fbW * 4);
+      ui::setStatus(state,
+                    saved ? "Screenshot saved: snapshots/graphx_screenshot.png."
+                          : "Failed to save screenshot.");
     }
 
     glfwSwapBuffers(window);

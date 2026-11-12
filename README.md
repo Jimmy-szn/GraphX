@@ -32,6 +32,7 @@ An iterative math visualization C++/OpenGL application that provides an interact
 4. 3D Function plotting: Sample points will be connected to form  triangles and  displayed over the 3D surface as a filled mesh.
 5. 2D Fractal plotting: Iteration of preset number equations for each point in the viewport and coloring points according to their escape iteration count.
 6. Tweening for smooth view transitions
+7. 3D function surfaces with filled or wireframe rendering, height-based coloring, optional lighting, and a smoothly eased orbit camera (drag to rotate; scroll/buttons to zoom; reset to restore)
 ## Build
 
 cmake -s, B build -G Ninja
@@ -57,11 +58,11 @@ cmake --build build
 - Snapshot Saving
 - 2D Fractals Plotting
 - Tweening for smooth view transitions
-- 3D Explicit function plotting
-- Camera navigation like zooming, e.t.c
+- 3D function surfaces with filled or wireframe rendering, height-based coloring, optional lighting, and a smoothly eased orbit camera (drag to rotate; scroll/buttons to zoom; reset to restore)
+- 2D equations: Supports custom explicit functions (y=f(x))
 
 ## Inprogress and Limitation
-- 2D Graph plotting uses preset functions, arbitrary equation input not yet supported
+- 2D equations: Supports custom explicit functions (y=f(x)), including +, -, *, /, ^, parentheses, and the functions sin, cos, tan, sqrt, exp, log, and abs. Implicit equations such as x^2 + y^2 = 9 are not supported.
 
 ## Evidence Screenshots
 ![GraphX application screenshot](docs/screenshots/image.png)
@@ -69,7 +70,5 @@ cmake --build build
 ![GraphX application screenshot3](docs/screenshots/3dCustomPlot.png)
 ![GraphX application screenshot3](docs/screenshots/3dRipple.png)
 ![GraphX application screenshot4](docs/screenshots/3dSineCosine.png)
-
-
 
 
