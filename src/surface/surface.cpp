@@ -242,10 +242,21 @@ void updateCamera(const AppState &s, double deltaTime) {
     g_targetCam.distance *= s.zoomRequest > 0 ? 0.8f : 1.25f;
   if (s.resetViewRequested)
     g_targetCam = kDefaultOrbit;
+//additional lines - double click reset
+      if (io.MouseDoubleClicked[0] && overScene)
+    g_targetCam = kDefaultOrbit;
 
   g_targetCam.pitch = std::clamp(g_targetCam.pitch, -1.5f, 1.5f);
   g_targetCam.distance = std::clamp(g_targetCam.distance, 3.0f, 100.0f);
 
+  //additional lines- added arrow keys
+    if (!io.WantCaptureKeyboard) {
+    const float step = 1.8f * float(deltaTime);
+    if (ImGui::IsKeyDown(ImGuiKey_LeftArrow))  g_targetCam.yaw   += step;
+    if (ImGui::IsKeyDown(ImGuiKey_RightArrow)) g_targetCam.yaw   -= step;
+    if (ImGui::IsKeyDown(ImGuiKey_UpArrow))    g_targetCam.pitch += step;
+    if (ImGui::IsKeyDown(ImGuiKey_DownArrow))  g_targetCam.pitch -= step;
+  }
   // Ease toward the target, same idea as the fractal view
   const float ease = float(1.0 - std::exp(-15.0 * deltaTime));
   g_cam.yaw += (g_targetCam.yaw - g_cam.yaw) * ease;
